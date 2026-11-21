@@ -1,5 +1,5 @@
 --[[
- UNIVERSAL HUB V4 - RAYFIELD EDITION
+ UNIVERSAL HUB V6 - PLAYER TROLLING
  Use only in experiences you own or are authorized to test.
  Client-side features may not replicate to the server.
 ]]
@@ -14,7 +14,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Window = Rayfield:CreateWindow({
     Name = "Universal Hub",
     LoadingTitle = "Universal Hub",
-    LoadingSubtitle = "Rayfield Edition • V4",
+    LoadingSubtitle = "Rayfield Edition • V6",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "UniversalHub",
@@ -318,6 +318,213 @@ VisualTab:CreateToggle({
 
 PlayersTab:CreateSection("Player utilities")
 local selectedPlayer
+
+-- PLAYER TROLLING: harmless client-side visual pranks only; nothing is sent to other players.
+local TrollTab = Window:CreateTab("Trolling", "smile")
+local trollObjects = {}
+local trollConnections = {}
+local trollEffects = {}
+local function selectedCharacter()
+    local p = selectedPlayer and Players:FindFirstChild(selectedPlayer)
+    return p and p.Character
+end
+local function clearTrollObject(key)
+    if trollObjects[key] then pcall(function() trollObjects[key]:Destroy() end); trollObjects[key]=nil end
+end
+local function makeTrollScreen(name, textValue, color, duration)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "UHTroll_" .. name
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 1000000
+    gui.Parent = LP:WaitForChild("PlayerGui")
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 360, 0, 74)
+    label.Position = UDim2.new(0.5, -180, 0.18, 0)
+    label.BackgroundColor3 = color or Color3.fromRGB(90, 40, 140)
+    label.BackgroundTransparency = 0.08
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Text = textValue
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBlack
+    label.Parent = gui
+    local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0,14); corner.Parent = label
+    if duration then task.delay(duration, function() if gui.Parent then gui:Destroy() end end) end
+    return gui
+end
+local function addTargetHighlight(rainbow)
+    clearTrollObject("highlight")
+    local ch = selectedCharacter()
+    if not ch then notify("Trolling","Select a player who is in the game."); return end
+    local h = Instance.new("Highlight")
+    h.Name = "UHTrollHighlight"; h.Adornee = ch
+    h.FillTransparency = 0.72; h.OutlineTransparency = 0
+    h.FillColor = Color3.fromRGB(190,80,255); h.OutlineColor = Color3.fromRGB(255,255,255)
+    h.Parent = LP:WaitForChild("PlayerGui")
+    trollObjects.highlight = h
+    if rainbow then
+        trollConnections.rainbow = RunService.RenderStepped:Connect(function()
+            if h.Parent then
+                local hue = (os.clock() % 3) / 3
+                h.OutlineColor = Color3.fromHSV(hue,1,1)
+                h.FillColor = Color3.fromHSV((hue+0.35)%1,0.8,1)
+            end
+        end)
+    end
+end
+local function addTargetBillboard(textValue, key)
+    clearTrollObject(key)
+    local ch = selectedCharacter()
+    local head = ch and ch:FindFirstChild("Head")
+    if not head then notify("Trolling","Selected player has no visible Head."); return end
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "UHTroll_"..key; gui.Size = UDim2.fromOffset(220,55)
+    gui.StudsOffset = Vector3.new(0,3.5,0); gui.AlwaysOnTop = true; gui.Adornee = head
+    gui.Parent = LP:WaitForChild("PlayerGui")
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1,1); label.BackgroundTransparency = 1
+    label.Text = textValue; label.TextColor3 = Color3.fromRGB(255,220,80)
+    label.TextStrokeTransparency = 0; label.TextScaled = true
+    label.Font = Enum.Font.GothamBlack; label.Parent = gui
+    trollObjects[key] = gui
+end
+local function setCameraEffect(key, enabled, effectName)
+    local existing = trollEffects[key]
+    if existing then existing:Destroy(); trollEffects[key]=nil end
+    if enabled then
+        local effect = Instance.new(effectName)
+        effect.Name = "UHTroll_"..key
+        effect.Parent = Lighting
+        trollEffects[key] = effect
+    end
+end
+local function setScreenOverlay(key, enabled, color, transparency)
+    clearTrollObject(key)
+    if not enabled then return end
+    local gui = Instance.new("ScreenGui"); gui.Name = "UHTroll_"..key
+    gui.IgnoreGuiInset = true; gui.ResetOnSpawn = false; gui.DisplayOrder = 999998
+    gui.Parent = LP:WaitForChild("PlayerGui")
+    local frame = Instance.new("Frame"); frame.Size = UDim2.fromScale(1,1)
+    frame.BackgroundColor3 = color; frame.BackgroundTransparency = transparency
+    frame.BorderSizePixel = 0; frame.Parent = gui
+    trollObjects[key] = gui
+end
+
+TrollTab:CreateSection("Selected player — local visual pranks")
+TrollTab:CreateToggle({Name="Target highlight",CurrentValue=false,Callback=function(v)
+    if v then addTargetHighlight(false) else clearTrollObject("highlight") end
+end})
+TrollTab:CreateToggle({Name="Rainbow target outline",CurrentValue=false,Callback=function(v)
+    if trollConnections.rainbow then trollConnections.rainbow:Disconnect(); trollConnections.rainbow=nil end
+    if v then addTargetHighlight(true) else clearTrollObject("highlight") end
+end})
+TrollTab:CreateToggle({Name="Funny nameplate",CurrentValue=false,Callback=function(v)
+    if v then addTargetBillboard("CERTIFIED TROLL 😂","nameplate") else clearTrollObject("nameplate") end
+end})
+TrollTab:CreateToggle({Name="Emoji above target",CurrentValue=false,Callback=function(v)
+    if v then addTargetBillboard("🤡 😂 💀","emoji") else clearTrollObject("emoji") end
+end})
+TrollTab:CreateToggle({Name="Target warning sign",CurrentValue=false,Callback=function(v)
+    if v then addTargetBillboard("WARNING: TOO FUNNY","warning") else clearTrollObject("warning") end
+end})
+TrollTab:CreateButton({Name="Confetti message",Callback=function()
+    local ch=selectedCharacter(); local head=ch and ch:FindFirstChild("Head")
+    if not head then notify("Trolling","Select a player first."); return end
+    addTargetBillboard("🎉 PARTY TIME 🎉","confetti")
+    task.delay(5,function() clearTrollObject("confetti") end)
+end})
+TrollTab:CreateButton({Name="Fake warning popup",Callback=function()
+    makeTrollScreen("Warning","⚠ YOU HAVE BEEN TROLLED ⚠",Color3.fromRGB(170,95,20),4)
+end})
+TrollTab:CreateButton({Name="Fake ban notice (local joke)",Callback=function()
+    makeTrollScreen("BanJoke","BAN CHECK: JUST KIDDING 😂",Color3.fromRGB(155,35,45),4)
+end})
+TrollTab:CreateButton({Name="Fake connection alert",Callback=function()
+    makeTrollScreen("Connection","Connection unstable... probably your luck 💀",Color3.fromRGB(55,65,85),4)
+end})
+TrollTab:CreateButton({Name="Fake countdown",Callback=function()
+    local gui=makeTrollScreen("Countdown","3",Color3.fromRGB(65,45,120))
+    task.spawn(function()
+        local label=gui:FindFirstChildWhichIsA("TextLabel")
+        for i=3,1,-1 do if not gui.Parent then return end; label.Text=tostring(i); task.wait(1) end
+        if gui.Parent then label.Text="PRANKED 😂"; task.wait(1); gui:Destroy() end
+    end)
+end})
+TrollTab:CreateToggle({Name="Screen shake",CurrentValue=false,Callback=function(v)
+    if trollConnections.shake then trollConnections.shake:Disconnect(); trollConnections.shake=nil end
+    if v then trollConnections.shake=RunService.RenderStepped:Connect(function()
+        local cam=workspace.CurrentCamera
+        if cam then cam.CFrame=cam.CFrame*CFrame.new(math.random(-2,2)/100,math.random(-2,2)/100,0) end
+    end) end
+end})
+TrollTab:CreateToggle({Name="Upside-down camera",CurrentValue=false,Callback=function(v)
+    if trollConnections.flip then trollConnections.flip:Disconnect(); trollConnections.flip=nil end
+    if v then trollConnections.flip=RunService.RenderStepped:Connect(function()
+        local cam=workspace.CurrentCamera
+        if cam then cam.CFrame=cam.CFrame*CFrame.Angles(0,0,math.pi) end
+    end) end
+end})
+TrollTab:CreateToggle({Name="Fish-eye style FOV",CurrentValue=false,Callback=function(v)
+    if v then
+        trollEffects.oldFov = workspace.CurrentCamera.FieldOfView
+        workspace.CurrentCamera.FieldOfView = 110
+    elseif trollEffects.oldFov then
+        workspace.CurrentCamera.FieldOfView = trollEffects.oldFov; trollEffects.oldFov=nil
+    end
+end})
+TrollTab:CreateToggle({Name="Grayscale screen",CurrentValue=false,Callback=function(v)
+    if v then
+        local e=Instance.new("ColorCorrectionEffect"); e.Saturation=-1; e.Parent=Lighting; trollEffects.gray=e
+    elseif trollEffects.gray then trollEffects.gray:Destroy(); trollEffects.gray=nil end
+end})
+TrollTab:CreateToggle({Name="Extra blur",CurrentValue=false,Callback=function(v)
+    if v then local e=Instance.new("BlurEffect"); e.Size=18; e.Parent=Lighting; trollEffects.blur=e
+    elseif trollEffects.blur then trollEffects.blur:Destroy(); trollEffects.blur=nil end
+end})
+TrollTab:CreateToggle({Name="Cartoon colors",CurrentValue=false,Callback=function(v)
+    if v then
+        local e=Instance.new("ColorCorrectionEffect"); e.Saturation=0.8; e.Contrast=0.25; e.Parent=Lighting; trollEffects.cartoon=e
+    elseif trollEffects.cartoon then trollEffects.cartoon:Destroy(); trollEffects.cartoon=nil end
+end})
+TrollTab:CreateToggle({Name="Red alert overlay",CurrentValue=false,Callback=function(v)
+    setScreenOverlay("redalert",v,Color3.fromRGB(255,0,0),0.88)
+end})
+TrollTab:CreateButton({Name="Emoji rain",Callback=function()
+    local gui=Instance.new("ScreenGui"); gui.Name="UHTroll_EmojiRain"; gui.IgnoreGuiInset=true; gui.Parent=LP:WaitForChild("PlayerGui")
+    for i=1,24 do
+        local label=Instance.new("TextLabel"); label.BackgroundTransparency=1
+        label.Size=UDim2.fromOffset(42,42); label.Position=UDim2.new(math.random(),0,-0.1,0)
+        label.Text=({"😂","🤡","💀","🎉","🗿"})[math.random(1,5)]; label.TextScaled=true; label.Parent=gui
+        task.spawn(function()
+            for step=1,35 do if not label.Parent then return end
+                label.Position=label.Position+UDim2.new(0,0,0,0.035); task.wait(0.04)
+            end
+        end)
+    end
+    task.delay(3,function() if gui.Parent then gui:Destroy() end end)
+end})
+TrollTab:CreateButton({Name="Big prank text",Callback=function()
+    local gui=makeTrollScreen("BigText","SKILL ISSUE 😭",Color3.fromRGB(95,35,150),3)
+    local label=gui:FindFirstChildWhichIsA("TextLabel"); label.Size=UDim2.new(0,520,0,110); label.Position=UDim2.new(0.5,-260,0.45,0)
+end})
+TrollTab:CreateButton({Name="Fake loading screen",Callback=function()
+    local gui=makeTrollScreen("Loading","Loading player skills... 0%",Color3.fromRGB(30,35,55),5)
+    task.spawn(function()
+        local label=gui:FindFirstChildWhichIsA("TextLabel")
+        for n=0,100,20 do if not gui.Parent then return end; label.Text="Loading player skills... "..n.."%"; task.wait(0.8) end
+        if gui.Parent then label.Text="FAILED: SKILL NOT FOUND 😂" end
+    end)
+end})
+TrollTab:CreateSection("Emergency")
+TrollTab:CreateButton({Name="PANIC — clear all trolling effects",Color=Color3.fromRGB(190,55,65),Callback=function()
+    for _,obj in pairs(trollObjects) do pcall(function() obj:Destroy() end) end
+    trollObjects={}
+    for _,con in pairs(trollConnections) do pcall(function() con:Disconnect() end) end
+    trollConnections={}
+    for key,effect in pairs(trollEffects) do if typeof(effect)=="Instance" then pcall(function() effect:Destroy() end) end; trollEffects[key]=nil end
+    local cam=workspace.CurrentCamera
+    if cam and trollEffects.oldFov then cam.FieldOfView=trollEffects.oldFov end
+    notify("Trolling","All local prank effects cleared.")
+end})
 local function getPlayerNames()
     local names={}
     for _,player in ipairs(Players:GetPlayers()) do
@@ -401,7 +608,7 @@ SettingsTab:CreateButton({
     end
 })
 SettingsTab:CreateParagraph({
-    Title="Universal Hub V4",
+    Title="Universal Hub V6",
     Content="Rayfield interface. Use only in experiences you own or are authorized to test. Some client-side effects may not replicate to the server."
 })
 SettingsTab:CreateKeybind({
@@ -452,5 +659,5 @@ LP.CharacterAdded:Connect(function(character)
 end)
 
 pcall(function() Rayfield:LoadConfiguration() end)
-notify("Universal Hub","Rayfield V4 loaded successfully.")
-print("Universal Hub V4 - Rayfield Edition loaded")
+notify("Universal Hub","Rayfield V6 loaded successfully.")
+print("Universal Hub V6 - Rayfield Edition loaded")
