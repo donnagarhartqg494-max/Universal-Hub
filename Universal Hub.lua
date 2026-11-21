@@ -1,8 +1,15 @@
 --[[
- UNIVERSAL HUB V6 - PLAYER TROLLING
+ UNIVERSAL HUB V7 - RESTARTABLE
  Use only in experiences you own or are authorized to test.
  Client-side features may not replicate to the server.
 ]]
+-- Stop the previous copy before creating a new one (executor re-run, no rejoin needed).
+local HUB_ENV = (getgenv and getgenv()) or _G
+if HUB_ENV.__UniversalHubShutdown then
+    pcall(HUB_ENV.__UniversalHubShutdown)
+    task.wait(0.15)
+end
+
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -14,7 +21,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Window = Rayfield:CreateWindow({
     Name = "Universal Hub",
     LoadingTitle = "Universal Hub",
-    LoadingSubtitle = "Rayfield Edition • V6",
+    LoadingSubtitle = "Rayfield Edition • V7",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "UniversalHub",
@@ -594,21 +601,42 @@ SettingsTab:CreateButton({
         notify("Settings","Configuration save requested.")
     end
 })
+local function shutdownHub()
+    if connections.Fly then pcall(function() connections.Fly:Disconnect() end); connections.Fly=nil end
+    if connections.Noclip then pcall(function() connections.Noclip:Disconnect() end); connections.Noclip=nil end
+    if connections.AntiAFK then pcall(function() connections.AntiAFK:Disconnect() end); connections.AntiAFK=nil end
+    for _,connection in pairs(connections) do pcall(function() connection:Disconnect() end) end
+    for _,connection in pairs(trollConnections) do pcall(function() connection:Disconnect() end) end
+    trollConnections={}
+    for _,object in pairs(trollObjects) do pcall(function() object:Destroy() end) end
+    trollObjects={}
+    for _,effect in pairs(trollEffects) do
+        if typeof(effect)=="Instance" then pcall(function() effect:Destroy() end) end
+    end
+    if trollEffects.oldFov and workspace.CurrentCamera then workspace.CurrentCamera.FieldOfView=trollEffects.oldFov end
+    trollEffects={}
+    setFly(false)
+    setNoclip(false)
+    setESP(false)
+    setFullBright(false)
+    setXRay(false)
+    setAntiAFK(false)
+    pcall(function() Rayfield:Destroy() end)
+    pcall(function() reopenGui:Destroy() end)
+    if HUB_ENV.__UniversalHubShutdown then HUB_ENV.__UniversalHubShutdown=nil end
+end
+HUB_ENV.__UniversalHubShutdown = shutdownHub
+
 SettingsTab:CreateButton({
-    Name="Unload hub",
+    Name="POWER OFF — stop script (run again for update)",
+    Color=Color3.fromRGB(190,55,65),
     Callback=function()
-        setFly(false)
-        setNoclip(false)
-        setESP(false)
-        setFullBright(false)
-        setXRay(false)
-        setAntiAFK(false)
-        for _,connection in pairs(connections) do pcall(function() connection:Disconnect() end) end
-        Rayfield:Destroy()
+        shutdownHub()
+        print("Universal Hub stopped. Run the latest loadstring to start the updated version.")
     end
 })
 SettingsTab:CreateParagraph({
-    Title="Universal Hub V6",
+    Title="Universal Hub V7",
     Content="Rayfield interface. Use only in experiences you own or are authorized to test. Some client-side effects may not replicate to the server."
 })
 SettingsTab:CreateKeybind({
@@ -659,5 +687,5 @@ LP.CharacterAdded:Connect(function(character)
 end)
 
 pcall(function() Rayfield:LoadConfiguration() end)
-notify("Universal Hub","Rayfield V6 loaded successfully.")
-print("Universal Hub V6 - Rayfield Edition loaded")
+notify("Universal Hub","Rayfield V7 loaded successfully.")
+print("Universal Hub V7 - Rayfield Edition loaded")
