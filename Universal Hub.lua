@@ -24,6 +24,48 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
+-- Persistent reopen button: this GUI is separate from Rayfield, so it stays visible when the hub is hidden/closed.
+local reopenGui = Instance.new("ScreenGui")
+reopenGui.Name = "UniversalHubReopen"
+reopenGui.ResetOnSpawn = false
+reopenGui.IgnoreGuiInset = true
+reopenGui.DisplayOrder = 999999
+reopenGui.Parent = LP:WaitForChild("PlayerGui")
+
+local reopenButton = Instance.new("TextButton")
+reopenButton.Name = "ShowMenu"
+reopenButton.Size = UDim2.fromOffset(132, 42)
+reopenButton.Position = UDim2.new(0, 18, 0.5, -21)
+reopenButton.BackgroundColor3 = Color3.fromRGB(112, 72, 190)
+reopenButton.Text = "SHOW MENU"
+reopenButton.TextColor3 = Color3.new(1, 1, 1)
+reopenButton.TextSize = 14
+reopenButton.Font = Enum.Font.GothamBold
+reopenButton.Visible = false
+reopenButton.Parent = reopenGui
+local reopenCorner = Instance.new("UICorner")
+reopenCorner.CornerRadius = UDim.new(0, 10)
+reopenCorner.Parent = reopenButton
+local reopenStroke = Instance.new("UIStroke")
+reopenStroke.Color = Color3.fromRGB(190, 155, 255)
+reopenStroke.Thickness = 1.5
+reopenStroke.Parent = reopenButton
+
+reopenButton.MouseButton1Click:Connect(function()
+    pcall(function() Rayfield:SetVisibility(true) end)
+    reopenButton.Visible = false
+end)
+
+-- Keep the reopen button in sync with Rayfield visibility.
+task.spawn(function()
+    while reopenGui.Parent do
+        task.wait(0.25)
+        local visible = true
+        pcall(function() visible = Rayfield:IsVisible() end)
+        reopenButton.Visible = not visible
+    end
+end)
+
 local function notify(title, content)
     Rayfield:Notify({Title=title, Content=content, Duration=4, Image=4483362458})
 end
