@@ -1,5 +1,5 @@
 --[[
- UNIVERSAL HUB V3 - RAYFIELD EDITION
+ UNIVERSAL HUB V4 - RAYFIELD EDITION
  Use only in experiences you own or are authorized to test.
  Client-side features may not replicate to the server.
 ]]
@@ -14,7 +14,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Window = Rayfield:CreateWindow({
     Name = "Universal Hub",
     LoadingTitle = "Universal Hub",
-    LoadingSubtitle = "Rayfield Edition • V3",
+    LoadingSubtitle = "Rayfield Edition • V4",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "UniversalHub",
@@ -24,24 +24,26 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
--- Persistent reopen button: this GUI is separate from Rayfield, so it stays visible when the hub is hidden/closed.
+-- Persistent reopen button: kept in PlayerGui independently from Rayfield.
 local reopenGui = Instance.new("ScreenGui")
 reopenGui.Name = "UniversalHubReopen"
 reopenGui.ResetOnSpawn = false
 reopenGui.IgnoreGuiInset = true
 reopenGui.DisplayOrder = 999999
+reopenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 reopenGui.Parent = LP:WaitForChild("PlayerGui")
 
 local reopenButton = Instance.new("TextButton")
 reopenButton.Name = "ShowMenu"
-reopenButton.Size = UDim2.fromOffset(132, 42)
-reopenButton.Position = UDim2.new(0, 18, 0.5, -21)
+reopenButton.Size = UDim2.fromOffset(142, 46)
+reopenButton.Position = UDim2.new(0, 18, 0.5, -23)
 reopenButton.BackgroundColor3 = Color3.fromRGB(112, 72, 190)
 reopenButton.Text = "SHOW MENU"
 reopenButton.TextColor3 = Color3.new(1, 1, 1)
-reopenButton.TextSize = 14
+reopenButton.TextSize = 15
 reopenButton.Font = Enum.Font.GothamBold
-reopenButton.Visible = false
+reopenButton.Visible = true
+reopenButton.ZIndex = 1000
 reopenButton.Parent = reopenGui
 local reopenCorner = Instance.new("UICorner")
 reopenCorner.CornerRadius = UDim.new(0, 10)
@@ -51,21 +53,26 @@ reopenStroke.Color = Color3.fromRGB(190, 155, 255)
 reopenStroke.Thickness = 1.5
 reopenStroke.Parent = reopenButton
 
-reopenButton.MouseButton1Click:Connect(function()
-    pcall(function() Rayfield:SetVisibility(true) end)
-    reopenButton.Visible = false
-end)
-
--- Keep the reopen button in sync with Rayfield visibility.
-task.spawn(function()
-    while reopenGui.Parent do
-        task.wait(0.25)
-        local visible = true
-        pcall(function() visible = Rayfield:IsVisible() end)
-        reopenButton.Visible = not visible
+local function showRayfield()
+    -- Rayfield versions differ: restore its ScreenGui directly, then call its public API if available.
+    for _, container in ipairs({LP:FindFirstChildOfClass("PlayerGui"), game:GetService("CoreGui")}) do
+        if container then
+            for _, item in ipairs(container:GetDescendants()) do
+                if item:IsA("ScreenGui") and (string.find(string.lower(item.Name), "rayfield") or string.find(string.lower(item.Name), "universal")) then
+                    item.Enabled = true
+                end
+            end
+        end
     end
+    pcall(function() Rayfield:SetVisibility(true) end)
+end
+
+reopenButton.MouseButton1Click:Connect(function()
+    showRayfield()
 end)
 
+-- The reopen control intentionally remains visible: no dependency on IsVisible(),
+-- which is not present in every Rayfield build.
 local function notify(title, content)
     Rayfield:Notify({Title=title, Content=content, Duration=4, Image=4483362458})
 end
@@ -394,7 +401,7 @@ SettingsTab:CreateButton({
     end
 })
 SettingsTab:CreateParagraph({
-    Title="Universal Hub V3",
+    Title="Universal Hub V4",
     Content="Rayfield interface. Use only in experiences you own or are authorized to test. Some client-side effects may not replicate to the server."
 })
 SettingsTab:CreateKeybind({
@@ -445,5 +452,5 @@ LP.CharacterAdded:Connect(function(character)
 end)
 
 pcall(function() Rayfield:LoadConfiguration() end)
-notify("Universal Hub","Rayfield V3 loaded successfully.")
-print("Universal Hub V3 - Rayfield Edition loaded")
+notify("Universal Hub","Rayfield V4 loaded successfully.")
+print("Universal Hub V4 - Rayfield Edition loaded")
