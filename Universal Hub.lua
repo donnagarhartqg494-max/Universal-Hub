@@ -97,6 +97,7 @@ local cfg = {Speed=16, Jump=50, FlySpeed=55, FOV=70}
 local state = {Fly=false,Noclip=false,InfiniteJump=false,FullBright=false,ESP=false,AntiAFK=false,XRay=false}
 local connections = {}
 local highlights = {}
+local espLabels = {}
 local flyVelocity, flyGyro
 local oldLighting
 local xrayOriginal = {}
@@ -154,12 +155,16 @@ end
 
 local function clearESP()
     for _,highlight in pairs(highlights) do pcall(function() highlight:Destroy() end) end
+    for _,gui in pairs(espLabels) do pcall(function() gui:Destroy() end) end
     highlights={}
+    espLabels={}
 end
 local function addESP(player)
     if player==LP or not state.ESP or highlights[player] then return end
     local character=player.Character
-    if not character or not getRoot(character) then return end
+    local root=character and getRoot(character)
+    if not character or not root then return end
+
     local highlight=Instance.new("Highlight")
     highlight.Name="UniversalHubESP"
     highlight.Adornee=character
@@ -169,6 +174,42 @@ local function addESP(player)
     highlight.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent=LP:WaitForChild("PlayerGui")
     highlights[player]=highlight
+
+    local billboard=Instance.new("BillboardGui")
+    billboard.Name="UniversalHubESPLabel"
+    billboard.Adornee=root
+    billboard.Size=UDim2.fromOffset(190,42)
+    billboard.StudsOffset=Vector3.new(0,3.2,0)
+    billboard.AlwaysOnTop=true
+    billboard.MaxDistance=2500
+    billboard.Parent=LP:WaitForChild("PlayerGui")
+
+    local label=Instance.new("TextLabel")
+    label.BackgroundTransparency=1
+    label.Size=UDim2.fromScale(1,1)
+    label.Font=Enum.Font.GothamBold
+    label.TextSize=13
+    label.TextColor3=Color3.fromRGB(255,255,255)
+    label.TextStrokeTransparency=0.25
+    label.TextWrapped=true
+    label.Parent=billboard
+    espLabels[player]=billboard
+
+    local function updateLabel()
+        if not state.ESP or not billboard.Parent then return end
+        local myRoot=getRoot()
+        local theirRoot=player.Character and getRoot(player.Character)
+        if myRoot and theirRoot then
+            local distance=math.floor((myRoot.Position-theirRoot.Position).Magnitude+0.5)
+            label.Text=player.DisplayName.." (@"..player.Name..")\n"..distance.." studs"
+            billboard.Adornee=theirRoot
+        else
+            label.Text=player.DisplayName.."\n-- studs"
+        end
+    end
+    updateLabel()
+    local conn=RunService.Heartbeat:Connect(updateLabel)
+    billboard.Destroying:Connect(function() if conn then conn:Disconnect() end end)
 end
 local function setESP(enabled)
     state.ESP=enabled
@@ -662,6 +703,7 @@ Players.PlayerAdded:Connect(function(player)
 end)
 Players.PlayerRemoving:Connect(function(player)
     if highlights[player] then highlights[player]:Destroy(); highlights[player]=nil end
+    if espLabels[player] then espLabels[player]:Destroy(); espLabels[player]=nil end
 end)
 for _,player in ipairs(Players:GetPlayers()) do
     player.CharacterAdded:Connect(function()
