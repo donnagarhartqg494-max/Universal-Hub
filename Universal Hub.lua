@@ -329,10 +329,16 @@ MovementTab:CreateSlider({
     end
 })
 MovementTab:CreateToggle({
-    Name="Infinite Jump",
+    Name="Бесконечный прыжок (Infinite Jump)",
     CurrentValue=false,
     Flag="InfiniteJump",
-    Callback=function(value) state.InfiniteJump=value end
+    Callback=function(value)
+        state.InfiniteJump=value
+        if value then
+            local humanoid=getHumanoid()
+            if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Landed) end
+        end
+    end
 })
 
 VisualTab:CreateSection("Visual settings")
